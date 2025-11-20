@@ -1,0 +1,225 @@
+#include <iostream>
+#include <string>
+using namespace std;
+
+#define TAM_TXT 50
+#define CAPACIDAD 100
+#define PRECIO_ASIENTO 1000
+
+struct fecha_venta_t 
+{
+    int dia;
+    int mes;
+    int anio;
+};
+struct reservas_t 
+{
+    string nombre;
+    string apellido;
+    fecha_venta_t fecha_venta;
+    int numero_asiento;
+    bool estado;
+};
+struct nodo_t 
+{
+    reservas_t reserva;
+    nodo_t* siguiente;
+};
+
+void registrar_venta(nodo_t*& cabeza);
+void mostrar_asientos_disponibles(nodo_t* cabeza);
+void consultar_asiento(nodo_t* cabeza);
+void cerrar_ventas(nodo_t* cabeza);
+void liberar_lista(nodo_t*& cabeza);
+bool asiento_ocupado(nodo_t* cabeza, int numero);
+
+int main() 
+{
+    nodo_t* lista = nullptr;
+    int opcion;
+
+    do 
+    {
+        cout << "- GESTIÓN DE RESERVAS DE ASIENTOS -\n";
+        cout << "1. Registrar la venta de un asiento\n";
+        cout << "2. Mostrar los asientos disponibles\n";
+        cout << "3. Consultar asientos\n";
+        cout << "4. Cerrar ventas\n";
+        cout << "5. Salir\n";
+        cout << "Seleccione una opción: ";
+        cin >> opcion;
+
+        switch (opcion) 
+        {
+            case 1:
+                registrar_venta(lista);
+                break;
+            case 2:
+                mostrar_asientos_disponibles(lista);
+                break;
+            case 3:
+                consultar_asiento(lista);
+                break;
+            case 4:
+                cerrar_ventas(lista);
+                break;
+            case 5:
+                liberar_lista(lista);
+                cout << "Saliendo del programa.\n";
+                break;
+            default:
+                cout << "Opción no válida. Intente nuevamente.\n";
+        }
+    } while (opcion != 5);
+
+    return 0;
+}
+bool asiento_ocupado(nodo_t* cabeza, int numero) 
+{
+    while (cabeza != nullptr) 
+    {
+        if (cabeza->reserva.estado && cabeza->reserva.numero_asiento == numero) 
+        {
+            return true;
+        }
+        cabeza = cabeza->siguiente;
+    }
+    return false;
+}
+void registrar_venta(nodo_t*& cabeza) 
+{
+    int asiento;
+
+    while (true) 
+    {
+        cout << "Ingrese un número de asiento (0-99): ";
+        cin >> asiento;
+        if (asiento < 0 || asiento >= 100) 
+        {
+            cout << "Asiento inválido.\n";
+        } else if (asiento_ocupado(cabeza, asiento)) 
+        {
+            cout << "Asiento " << asiento << " ocupado.\n";
+        } else {
+            break;
+        }
+    }
+
+    nodo_t* nuevo = new nodo_t();
+    cout << "Nombre: ";
+    cin >> nuevo->reserva.nombre;
+    cout << "Apellido: ";
+    cin >> nuevo->reserva.apellido;
+    cout << "Fecha de venta (dd mm aaaa): ";
+    cin >> nuevo->reserva.fecha_venta.dia 
+        >> nuevo->reserva.fecha_venta.mes 
+        >> nuevo->reserva.fecha_venta.anio;
+
+    nuevo->reserva.numero_asiento = asiento;
+    nuevo->reserva.estado = true;
+    nuevo->siguiente = cabeza;
+    cabeza = nuevo;
+}
+
+void mostrar_asientos_disponibles(nodo_t* cabeza) 
+{
+    int disponibles = 0, ocupados = 0, total_recaudado = 0;
+    int asientos_por_grupo = 2;
+    int asientos_por_fila = 4;
+    bool ocupados_vector[CAPACIDAD] = {false};
+
+    nodo_t* actual = cabeza;
+    while (actual != nullptr) 
+    {
+        if (actual->reserva.estado) 
+        {
+            ocupados_vector[actual->reserva.numero_asiento] = true;
+        }
+        actual = actual->siguiente;
+    }
+    cout << "Asientos:\n";
+    for (int i = 0; i < CAPACIDAD; i++) 
+    {
+        if (i % asientos_por_fila == 0) 
+        {
+            cout << "  ";
+        }
+        if (!ocupados_vector[i]) 
+        {
+            cout << "\033[32m" << i << " \033[0m"; 
+            disponibles++;
+        } else {
+            cout << "\033[31m" << i << " \033[0m";
+            ocupados++;
+            total_recaudado += PRECIO_ASIENTO;
+        }
+        if ((i + 1) % asientos_por_grupo == 0 && i != 99) 
+        {
+            cout << "    ";
+        }
+        if ((i + 1) % asientos_por_fila == 0) 
+        {
+            cout << "\n";
+        }
+    }
+    cout << "Total de asientos disponibles: " << disponibles << "\n";
+    cout << "Total de asientos ocupados: " << ocupados << "\n";
+    cout << "Total recaudado: $" << total_recaudado << "\n";
+}
+
+void consultar_asiento(nodo_t* cabeza) 
+{
+    string apellido;
+    int encontrados = 0;
+
+    cout << "Consultar por apellido\n";
+    cout << "Ingrese el apellido: ";
+    cin >> apellido;
+    cout << "Asientos comprados por personas con apellido '" << apellido << "':\n";
+    while (cabeza != nullptr) 
+    {
+        if (cabeza->reserva.estado && cabeza->reserva.apellido == apellido) 
+        {
+            cout << "Asiento " << cabeza->reserva.numero_asiento << ": "
+                 << cabeza->reserva.nombre << " " << cabeza->reserva.apellido
+                 << ", Fecha: "
+                 << cabeza->reserva.fecha_venta.dia << "/"
+                 << cabeza->reserva.fecha_venta.mes << "/"
+                 << cabeza->reserva.fecha_venta.anio << "\n";
+            encontrados++;
+        }
+        cabeza = cabeza->siguiente;
+    }
+    if (encontrados == 0) 
+    {
+        cout << "No se encontraron asientos vendidos a personas con el apellido '"
+             << apellido << "'.\n";
+    }
+}
+
+void cerrar_ventas(nodo_t* cabeza) 
+{
+    int vendidos = 0, total_recaudado = 0;
+    while (cabeza != nullptr) 
+    {
+        if (cabeza->reserva.estado) 
+        {
+            vendidos++;
+            total_recaudado += PRECIO_ASIENTO;
+            cabeza->reserva.estado = false;
+        }
+        cabeza = cabeza->siguiente;
+    }
+    cout << "Total recaudado: $" << total_recaudado << "\n";
+    cout << vendidos << " ventas hechas.\n";
+}
+
+void liberar_lista(nodo_t*& cabeza) 
+{
+    while (cabeza != nullptr) 
+    {
+        nodo_t* temp = cabeza;
+        cabeza = cabeza->siguiente;
+        delete temp;
+    }
+}
